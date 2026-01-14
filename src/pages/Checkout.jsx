@@ -1,3 +1,4 @@
+// src/pages/Checkout.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiMapPin, FiTruck, FiTag, FiChevronRight } from 'react-icons/fi';
@@ -11,9 +12,10 @@ import EmptyState from '../components/EmptyState';
 const Checkout = () => {
   const navigate = useNavigate();
   const { cart, cartTotal } = useCart();
+
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState(false);
-  
+
   const [addresses, setAddresses] = useState([]);
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [couponCode, setCouponCode] = useState('');
@@ -28,7 +30,6 @@ const Checkout = () => {
   }, []);
 
   useEffect(() => {
-    // Redirect if cart is empty
     if (!loading && cart.length === 0) {
       toast.error('Your cart is empty');
       navigate('/products');
@@ -39,12 +40,13 @@ const Checkout = () => {
     try {
       setLoading(true);
       const response = await addressService.getAllAddresses();
-      
+
       if (response.success) {
-        setAddresses(response.addresses);
-        
-        // Auto-select default address
-        const defaultAddress = response.addresses.find(addr => addr.isDefault);
+        setAddresses(response.addresses || []);
+
+        const defaultAddress = (response.addresses || []).find(
+          (addr) => addr.isDefault
+        );
         if (defaultAddress) {
           setSelectedAddress(defaultAddress._id);
         }
@@ -65,16 +67,21 @@ const Checkout = () => {
 
     setApplying(true);
     try {
-      const response = await checkoutService.validateCoupon(couponCode, cartTotal);
-      
+      const response = await checkoutService.validateCoupon(
+        couponCode.trim(),
+        cartTotal
+      );
+
       if (response.success) {
         setAppliedCoupon(response.coupon);
-        setDiscount(response.discount);
+        setDiscount(response.discount || 0);
         toast.success(`Coupon applied! You saved ₹${response.discount}`);
       }
     } catch (error) {
       console.error('Apply coupon error:', error);
-      toast.error(error.response?.data?.message || 'Invalid coupon code');
+      toast.error(
+        error.response?.data?.message || 'Invalid coupon code'
+      );
     } finally {
       setApplying(false);
     }
@@ -92,9 +99,8 @@ const Checkout = () => {
     }
   };
 
-  const calculateShipping = () => {
-    return cartTotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_CHARGE;
-  };
+  const calculateShipping = () =>
+    cartTotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_CHARGE;
 
   const calculateTotal = () => {
     const shipping = calculateShipping();
@@ -107,7 +113,6 @@ const Checkout = () => {
       return;
     }
 
-    // Pass checkout data to payment page
     navigate('/payment', {
       state: {
         addressId: selectedAddress,
@@ -125,30 +130,38 @@ const Checkout = () => {
   }
 
   if (cart.length === 0) {
-    return null; // Will redirect in useEffect
+    return null;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4 max-w-7xl">
+    <div className="min-h-screen bg-slate-100 py-6 md:py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Checkout</h1>
-          <p className="text-gray-600">Complete your order</p>
+        <div className="mb-5">
+          <h1 className="text-2xl md:text-3xl font-semibold text-slate-900 mb-1">
+            Checkout
+          </h1>
+          <p className="text-xs md:text-sm text-slate-500">
+            Complete your order
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Address & Coupon */}
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)] gap-5 md:gap-6">
+          {/* Left Column */}
+          <div className="space-y-5 md:space-y-6">
             {/* Delivery Address */}
-            <div className="bg-white rounded-2xl shadow-sm p-6">
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 md:p-5">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-indigo-100 rounded-lg">
-                  <FiMapPin className="text-indigo-600" size={24} />
+                <div className="p-2 bg-purple-50 rounded-lg">
+                  <FiMapPin className="text-purple-600" size={18} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900">Delivery Address</h2>
-                  <p className="text-sm text-gray-600">Select where you want your order delivered</p>
+                  <h2 className="text-base md:text-lg font-semibold text-slate-900">
+                    Delivery address
+                  </h2>
+                  <p className="text-xs md:text-sm text-slate-500">
+                    Select where you want your order delivered.
+                  </p>
                 </div>
               </div>
 
@@ -156,8 +169,8 @@ const Checkout = () => {
                 <EmptyState
                   icon="package"
                   title="No addresses found"
-                  description="Add a delivery address to continue"
-                  actionLabel="Add Address"
+                  description="Add a delivery address to continue."
+                  actionLabel="Add address"
                   onAction={() => navigate('/addresses')}
                 />
               ) : (
@@ -171,39 +184,47 @@ const Checkout = () => {
                       onSelect={setSelectedAddress}
                     />
                   ))}
-                  
+
                   <button
                     onClick={() => navigate('/addresses')}
-                    className="w-full py-3 border-2 border-dashed border-gray-300 text-gray-600 rounded-xl font-medium hover:border-indigo-400 hover:text-indigo-600 transition-all"
+                    className="w-full py-2.5 border border-dashed border-slate-300 text-xs md:text-sm text-slate-600 rounded-xl font-medium hover:border-purple-400 hover:text-purple-600 transition-colors"
                   >
-                    + Add New Address
+                    + Add new address
                   </button>
                 </div>
               )}
             </div>
 
-            {/* Apply Coupon */}
-            <div className="bg-white rounded-2xl shadow-sm p-6">
+            {/* Coupon */}
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 md:p-5">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <FiTag className="text-green-600" size={24} />
+                <div className="p-2 bg-emerald-50 rounded-lg">
+                  <FiTag className="text-emerald-600" size={18} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900">Apply Coupon</h2>
-                  <p className="text-sm text-gray-600">Enter your coupon code</p>
+                  <h2 className="text-base md:text-lg font-semibold text-slate-900">
+                    Apply coupon
+                  </h2>
+                  <p className="text-xs md:text-sm text-slate-500">
+                    Enter your coupon code if you have one.
+                  </p>
                 </div>
               </div>
 
               {appliedCoupon ? (
-                <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                  <div className="flex items-center justify-between">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+                  <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="font-semibold text-green-900">{appliedCoupon.code}</p>
-                      <p className="text-sm text-green-700">You saved ₹{discount}</p>
+                      <p className="text-sm font-semibold text-emerald-900">
+                        {appliedCoupon.code}
+                      </p>
+                      <p className="text-xs text-emerald-700">
+                        You saved ₹{discount.toLocaleString()}
+                      </p>
                     </div>
                     <button
                       onClick={handleRemoveCoupon}
-                      className="text-sm text-red-600 hover:text-red-800 font-medium"
+                      className="text-xs font-medium text-red-600 hover:text-red-800"
                     >
                       Remove
                     </button>
@@ -214,109 +235,138 @@ const Checkout = () => {
                   <input
                     type="text"
                     value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    onChange={(e) =>
+                      setCouponCode(e.target.value.toUpperCase())
+                    }
                     placeholder="Enter coupon code"
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="flex-1 px-3 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                   />
                   <button
                     onClick={handleApplyCoupon}
                     disabled={applying || !couponCode.trim()}
-                    className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-purple-600 text-white hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {applying ? 'Applying...' : 'Apply'}
+                    {applying ? 'Applying…' : 'Apply'}
                   </button>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Right Column - Order Summary */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-sm p-6 sticky top-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Order Summary</h2>
+          {/* Right Column – Summary */}
+          <div>
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 md:p-5 sticky top-20">
+              <h2 className="text-base md:text-lg font-semibold text-slate-900 mb-3">
+                Order summary
+              </h2>
 
-              {/* Cart Items */}
-              <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
+              {/* Items */}
+              <div className="space-y-3 mb-4 max-h-52 overflow-y-auto">
                 {cart.map((item) => (
-                  <div key={item._id || item.product?._id} className="flex items-center gap-3">
+                  <div
+                    key={item._id || item.product?._id}
+                    className="flex items-center gap-3"
+                  >
                     <img
-                      src={item.product?.images?.[0]?.url || '/placeholder.png'}
+                      src={
+                        item.product?.images?.[0]?.url ||
+                        item.product?.thumbnail?.url ||
+                        'https://placehold.co/64x64?text=Item'
+                      }
                       alt={item.product?.name || 'Product'}
-                      className="w-16 h-16 object-cover rounded-lg"
+                      className="w-12 h-12 object-cover rounded-lg bg-slate-100"
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
+                      <p className="text-xs font-medium text-slate-900 truncate">
                         {item.product?.name}
                       </p>
-                      <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                      <p className="text-[11px] text-slate-500">
+                        Qty: {item.quantity}
+                      </p>
                     </div>
-                    <p className="text-sm font-semibold text-gray-900">
-                      ₹{((item.price || 0) * item.quantity).toLocaleString()}
+                    <p className="text-xs font-semibold text-slate-900">
+                      ₹
+                      {(
+                        (item.price || 0) * item.quantity
+                      ).toLocaleString()}
                     </p>
                   </div>
                 ))}
               </div>
 
-              <div className="border-t border-gray-200 pt-4 space-y-3">
+              <div className="border-t border-slate-200 pt-3 space-y-2.5 text-sm">
                 {/* Subtotal */}
-                <div className="flex items-center justify-between text-gray-700">
+                <div className="flex items-center justify-between text-slate-700">
                   <span>Subtotal</span>
-                  <span className="font-semibold">₹{cartTotal.toLocaleString()}</span>
+                  <span className="font-semibold">
+                    ₹{cartTotal.toLocaleString()}
+                  </span>
                 </div>
 
                 {/* Discount */}
                 {discount > 0 && (
-                  <div className="flex items-center justify-between text-green-600">
+                  <div className="flex items-center justify-between text-emerald-600">
                     <span>Discount</span>
-                    <span className="font-semibold">-₹{discount.toLocaleString()}</span>
+                    <span className="font-semibold">
+                      -₹{discount.toLocaleString()}
+                    </span>
                   </div>
                 )}
 
                 {/* Shipping */}
-                <div className="flex items-center justify-between text-gray-700">
+                <div className="flex items-center justify-between text-slate-700">
                   <div className="flex items-center gap-1">
-                    <FiTruck size={16} />
+                    <FiTruck size={14} />
                     <span>Shipping</span>
                   </div>
                   <span className="font-semibold">
                     {calculateShipping() === 0 ? (
-                      <span className="text-green-600">FREE</span>
+                      <span className="text-emerald-600">FREE</span>
                     ) : (
                       `₹${calculateShipping()}`
                     )}
                   </span>
                 </div>
 
-                {/* Free Shipping Progress */}
+                {/* Free shipping progress */}
                 {cartTotal < FREE_SHIPPING_THRESHOLD && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p className="text-xs text-blue-800 mb-2">
-                      Add ₹{(FREE_SHIPPING_THRESHOLD - cartTotal).toLocaleString()} more for FREE shipping!
+                  <div className="mt-1 bg-blue-50 border border-blue-200 rounded-lg p-2.5">
+                    <p className="text-[11px] text-blue-800 mb-1.5">
+                      Add ₹
+                      {(
+                        FREE_SHIPPING_THRESHOLD - cartTotal
+                      ).toLocaleString()}{' '}
+                      more for free shipping.
                     </p>
-                    <div className="w-full bg-blue-200 rounded-full h-2">
+                    <div className="w-full bg-blue-100 rounded-full h-1.5 overflow-hidden">
                       <div
-                        className="bg-blue-600 h-2 rounded-full transition-all"
-                        style={{ width: `${(cartTotal / FREE_SHIPPING_THRESHOLD) * 100}%` }}
+                        className="bg-blue-600 h-1.5 rounded-full transition-all"
+                        style={{
+                          width: `${Math.min(
+                            (cartTotal / FREE_SHIPPING_THRESHOLD) * 100,
+                            100
+                          )}%`
+                        }}
                       />
                     </div>
                   </div>
                 )}
 
                 {/* Total */}
-                <div className="flex items-center justify-between text-lg font-bold text-gray-900 pt-3 border-t border-gray-200">
+                <div className="flex items-center justify-between text-sm md:text-base font-semibold text-slate-900 pt-2 border-t border-slate-200">
                   <span>Total</span>
                   <span>₹{calculateTotal().toLocaleString()}</span>
                 </div>
               </div>
 
-              {/* Proceed Button */}
+              {/* Proceed */}
               <button
                 onClick={handleProceedToPayment}
                 disabled={!selectedAddress}
-                className="w-full mt-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                className="w-full mt-4 py-2.5 md:py-3 bg-purple-600 text-white font-semibold rounded-full hover:bg-purple-700 transition-colors shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 text-sm md:text-base"
               >
-                Proceed to Payment
-                <FiChevronRight size={20} />
+                Proceed to payment
+                <FiChevronRight size={18} />
               </button>
             </div>
           </div>

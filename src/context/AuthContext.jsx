@@ -18,7 +18,7 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Check authentication status on mount
+  // Check authentication status on mount only
   useEffect(() => {
     checkAuthStatus();
   }, []);
@@ -26,20 +26,21 @@ export const AuthProvider = ({ children }) => {
   const checkAuthStatus = async () => {
     try {
       const response = await API.get('/auth/check');
-      
+
       if (response.data.success && response.data.authenticated) {
         const userData = response.data.user;
-        
-        // IMPORTANT: Block sellers and admins from buyer frontend
+
+        // Block sellers and admins from buyer frontend
         if (userData.role !== 'buyer') {
           toast.error('Sellers and admins cannot access the buyer portal. Redirecting...');
           await logout();
           setTimeout(() => {
-            window.location.href = import.meta.env.VITE_ADMIN_PANEL_URL || 'http://localhost:5174';
+            window.location.href =
+              import.meta.env.VITE_ADMIN_PANEL_URL || 'http://localhost:5174';
           }, 2000);
           return;
         }
-        
+
         setUser(userData);
         setIsAuthenticated(true);
         localStorage.setItem('user', JSON.stringify(userData));
@@ -58,39 +59,32 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (email, password) => {
-    try {
-      const response = await API.post('/auth/login', { email, password });
-      
-      if (response.data.success) {
-        const userData = response.data.user;
-        
-        // Check if user is buyer
-        if (userData.role !== 'buyer') {
-          toast.error('Sellers and admins must use the admin panel');
-          await logout();
-          
-          // Redirect to admin panel
-          setTimeout(() => {
-            window.location.href = response.data.redirectTo || 'http://localhost:5174';
-          }, 2000);
-          
-          return { success: false, message: 'Access denied' };
-        }
-        
-        setUser(userData);
-        setIsAuthenticated(true);
-        localStorage.setItem('user', JSON.stringify(userData));
-        toast.success(`Welcome back, ${userData.name}!`);
-        return { success: true, user: userData };
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      const message = error.response?.data?.message || 'Login failed';
-      toast.error(message);
-      return { success: false, message };
+// Login user
+const login = async (email, password) => {
+  try {
+    const { data } = await API.post('/auth/login', {
+      email,
+      password,
+      isBuyerFrontend: true, // Add this flag
+    });
+
+    if (data.success) {
+      setUser(data.user);
+      setIsAuthenticated(true);
+      return { success: true };
     }
-  };
+
+    return { success: false, message: 'Login failed' };
+  } catch (error) {
+    const message =
+      error.response?.data?.message ||
+      error.message ||
+      'Invalid email or password';
+
+    return { success: false, message };
+  }
+};
+
 
   const register = async (name, email, password) => {
     try {
@@ -98,9 +92,9 @@ export const AuthProvider = ({ children }) => {
         name,
         email,
         password,
-        role: 'buyer' // Always register as buyer on frontend
+        role: 'buyer'
       });
-      
+
       if (response.data.success) {
         const userData = response.data.user;
         setUser(userData);
@@ -120,21 +114,22 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       await API.post('/auth/logout');
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
       setUser(null);
       setIsAuthenticated(false);
       localStorage.removeItem('user');
       toast.success('Logged out successfully');
-    } catch (error) {
-      console.error('Logout error:', error);
-      // Still clear local state even if API call fails
-      setUser(null);
-      setIsAuthenticated(false);
-      localStorage.removeItem('user');
     }
   };
 
+  // IMPORTANT: just update state and keep user authenticated.
+  // Do NOT touch `loading` or call `checkAuthStatus` here.
   const updateUser = (userData) => {
+    if (!userData) return;
     setUser(userData);
+    setIsAuthenticated(true);
     localStorage.setItem('user', JSON.stringify(userData));
   };
 
@@ -149,13 +144,11 @@ export const AuthProvider = ({ children }) => {
     updateUser
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 AuthProvider.propTypes = {
   children: PropTypes.node.isRequired
 };
+
+export default AuthContext;

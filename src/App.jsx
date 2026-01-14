@@ -8,6 +8,7 @@ import { NotificationProvider } from './context/NotificationContext';
 import { SearchProvider } from './context/SearchContext';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import ScrollToTop from './components/ScrollToTop';
 
 // Pages
 import Login from './pages/Login';
@@ -32,13 +33,14 @@ import Notifications from './pages/Notifications';
 function App() {
   return (
     <Router>
+      <ScrollToTop /> {/* ensure every route change scrolls to top */}
       <AuthProvider>
         <NotificationProvider>
           <CartProvider>
             <WishlistProvider>
               <SearchProvider>
                 <Toaster position="top-right" />
-                
+
                 <Routes>
                   <Route path="/" element={<Layout />}>
                     {/* Public Routes */}
@@ -47,14 +49,14 @@ function App() {
                     <Route path="register" element={<Register />} />
                     <Route path="products" element={<Products />} />
                     <Route path="products/:id" element={<ProductDetail />} />
-                    
+
                     {/* Categories */}
                     <Route path="categories" element={<Categories />} />
                     <Route path="category/:slug" element={<CategoryProducts />} />
-                    
+
                     {/* Search */}
                     <Route path="search" element={<Search />} />
-                    
+
                     {/* Protected Routes */}
                     <Route element={<ProtectedRoute />}>
                       <Route path="wishlist" element={<Wishlist />} />
@@ -68,7 +70,7 @@ function App() {
                       <Route path="orders/:orderId/track" element={<OrderTracking />} />
                       <Route path="notifications" element={<Notifications />} />
                     </Route>
-                    
+
                     {/* Catch all */}
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Route>

@@ -1,6 +1,7 @@
+// src/pages/Categories.jsx
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FiGrid, FiChevronRight } from 'react-icons/fi';
+import { FiGrid, FiChevronRight, FiPackage } from 'react-icons/fi';
 import API from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import toast from 'react-hot-toast';
@@ -17,7 +18,7 @@ const Categories = () => {
     try {
       setLoading(true);
       const response = await API.get('/categories');
-      
+
       if (response.data.success) {
         setCategories(response.data.categories);
       }
@@ -34,74 +35,109 @@ const Categories = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Shop by Category</h1>
-          <p className="text-gray-600">Browse our wide range of product categories</p>
-        </div>
-
-        {/* Categories Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {categories.map((category) => (
-            <Link
-              key={category._id}
-              to={`/category/${category.slug}`}
-              className="group bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden"
-            >
-              {/* Category Image */}
-              <div className="relative h-48 overflow-hidden bg-gradient-to-br from-indigo-50 to-purple-50">
-                {category.image?.url || category.image ? (
-                  <img
-                    src={category.image?.url || category.image}
-                    alt={category.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <FiGrid className="text-indigo-300" size={64} />
-                  </div>
-                )}
-                
-                {/* Product Count Badge */}
-                {category.productCount > 0 && (
-                  <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full">
-                    <span className="text-sm font-semibold text-gray-900">
-                      {category.productCount} {category.productCount === 1 ? 'Product' : 'Products'}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Category Info */}
-              <div className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
-                      {category.name}
-                    </h3>
-                    {category.description && (
-                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                        {category.description}
-                      </p>
-                    )}
-                  </div>
-                  <FiChevronRight 
-                    className="text-gray-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-all" 
-                    size={20} 
-                  />
-                </div>
-              </div>
+    <div className="min-h-screen bg-slate-100 text-slate-900">
+      {/* Header */}
+      <div className="bg-white border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
+          <div className="flex items-center gap-2 text-xs md:text-sm text-slate-500 mb-4">
+            <Link to="/" className="hover:text-purple-600">
+              Home
             </Link>
-          ))}
-        </div>
+            <FiChevronRight size={14} />
+            <span className="text-slate-800 font-medium">Categories</span>
+          </div>
 
-        {/* Empty State */}
-        {categories.length === 0 && (
-          <div className="text-center py-16">
-            <FiGrid className="mx-auto text-gray-300 mb-4" size={64} />
-            <p className="text-gray-600 text-lg">No categories available</p>
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-semibold text-slate-900 mb-2">
+            Shop by category
+          </h1>
+          <p className="text-sm md:text-base text-slate-500">
+            Browse our wide range of product categories and find what you're looking for.
+          </p>
+        </div>
+      </div>
+
+      {/* Categories Grid */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10">
+        {categories.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            {categories.map((category) => (
+              <Link
+                key={category._id}
+                to={`/category/${category.slug}`}
+                className="group bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden"
+              >
+                {/* Category Image */}
+                <div className="relative aspect-square bg-slate-50 overflow-hidden">
+                  {category.image?.url || category.image ? (
+                    <img
+                      src={category.image?.url || category.image}
+                      alt={category.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      onError={(e) => {
+                        e.target.src = 'https://placehold.co/400x400?text=Category';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <FiGrid className="text-slate-300" size={48} />
+                    </div>
+                  )}
+
+                  {/* Product Count Badge */}
+                  {category.productCount > 0 && (
+                    <div className="absolute top-3 right-3 px-3 py-1 rounded-full bg-white/90 backdrop-blur-sm border border-slate-100">
+                      <span className="text-[11px] md:text-xs font-semibold text-slate-700">
+                        {category.productCount}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 bg-purple-600/0 group-hover:bg-purple-600/10 transition-colors" />
+                </div>
+
+                {/* Category Info */}
+                <div className="p-4 md:p-5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm md:text-base font-semibold text-slate-900 group-hover:text-purple-600 transition-colors line-clamp-1">
+                        {category.name}
+                      </h3>
+                      {category.description && (
+                        <p className="text-xs md:text-sm text-slate-500 mt-1 line-clamp-2">
+                          {category.description}
+                        </p>
+                      )}
+                    </div>
+                    <FiChevronRight
+                      className="text-slate-400 group-hover:text-purple-600 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-0.5"
+                      size={18}
+                    />
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm text-center py-16 px-4">
+            <div className="max-w-md mx-auto">
+              <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                <FiPackage className="text-slate-400" size={32} />
+              </div>
+              <h3 className="text-lg md:text-xl font-semibold text-slate-900 mb-2">
+                No categories available
+              </h3>
+              <p className="text-sm md:text-base text-slate-500 mb-6">
+                Categories will appear here once they are added.
+              </p>
+              <Link
+                to="/products"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700"
+              >
+                Browse all products
+                <FiChevronRight size={16} />
+              </Link>
+            </div>
           </div>
         )}
       </div>

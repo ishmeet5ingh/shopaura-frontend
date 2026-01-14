@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { notificationService } from '../services';
 import { useAuth } from './AuthContext';
@@ -24,49 +24,64 @@ export const NotificationProvider = ({ children }) => {
 
   // Initialize Socket.IO connection
   useEffect(() => {
-    if (isAuthenticated && user) {
-      const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
-      const newSocket = io(SOCKET_URL, {
-        withCredentials: true,
-        transports: ['websocket', 'polling']
-      });
-
-      newSocket.on('connect', () => {
-        console.log('✅ Socket connected:', newSocket.id);
-        // Join user's personal room
-        newSocket.emit('join', user.id);
-      });
-
-      // Listen for new notifications
-      newSocket.on('notification', (notification) => {
-        console.log('🔔 New notification received:', notification);
-
-        // Normalize id -> _id so the rest of the app can use _id consistently
-        const normalized = {
-          ...notification,
-          _id: notification._id || notification.id
-        };
-
-        setNotifications((prev) => [normalized, ...prev]);
-        setUnreadCount((prev) => prev + 1);
-
-        toast.success(notification.title, {
-          duration: 4000,
-          position: 'top-right'
-        });
-      });
-
-      newSocket.on('disconnect', () => {
-        console.log('❌ Socket disconnected');
-      });
-
-      setSocket(newSocket);
-
-      return () => {
-        newSocket.disconnect();
-      };
+    if (!isAuthenticated || !user?._id) {
+      return;
     }
-  }, [isAuthenticated, user]);
+
+    const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+    
+    const newSocket = io(SOCKET_URL, {
+      withCredentials: true,
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+      autoConnect: true
+    });
+
+    newSocket.on('connect', () => {
+      console.log('✅ Socket connected:', newSocket.id);
+      // Use _id instead of id
+      newSocket.emit('join', user._id);
+    });
+
+    // Listen for new notifications
+    newSocket.on('notification', (notification) => {
+      console.log('🔔 New notification received:', notification);
+
+      const normalized = {
+        ...notification,
+        _id: notification._id || notification.id
+      };
+
+      setNotifications((prev) => [normalized, ...prev]);
+      setUnreadCount((prev) => prev + 1);
+
+      toast.success(notification.title || 'New notification', {
+        duration: 4000,
+        position: 'top-right'
+      });
+    });
+
+    newSocket.on('disconnect', (reason) => {
+      console.log('❌ Socket disconnected. Reason:', reason);
+    });
+
+    newSocket.on('connect_error', (error) => {
+      console.error('❌ Socket connection error:', error.message);
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      console.log('🔌 Cleaning up socket connection');
+      newSocket.off('connect');
+      newSocket.off('notification');
+      newSocket.off('disconnect');
+      newSocket.off('connect_error');
+      newSocket.disconnect();
+    };
+  }, [isAuthenticated, user?._id]); // Only depend on _id
 
   // Fetch notifications on mount
   useEffect(() => {
@@ -77,7 +92,7 @@ export const NotificationProvider = ({ children }) => {
   }, [isAuthenticated]);
 
   // Fetch all notifications
-  const fetchNotifications = async (page = 1, limit = 20, unreadOnly = false) => {
+  const fetchNotifications = useCallback(async (page = 1, limit = 20, unreadOnly = false) => {
     try {
       setLoading(true);
       const response = await notificationService.getAllNotifications(page, limit, unreadOnly);
@@ -90,10 +105,10 @@ export const NotificationProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Fetch unread count
-  const fetchUnreadCount = async () => {
+  const fetchUnreadCount = useCallback(async () => {
     try {
       const response = await notificationService.getUnreadCount();
       if (response.success) {
@@ -102,10 +117,10 @@ export const NotificationProvider = ({ children }) => {
     } catch (error) {
       console.error('Failed to fetch unread count:', error);
     }
-  };
+  }, []);
 
   // Mark notification as read
-  const markAsRead = async (notificationId) => {
+  const markAsRead = useCallback(async (notificationId) => {
     try {
       const response = await notificationService.markAsRead(notificationId);
 
@@ -120,10 +135,10 @@ export const NotificationProvider = ({ children }) => {
     } catch (error) {
       console.error('Failed to mark as read:', error);
     }
-  };
+  }, []);
 
   // Mark all as read
-  const markAllAsRead = async () => {
+  const markAllAsRead = useCallback(async () => {
     try {
       const response = await notificationService.markAllAsRead();
 
@@ -136,10 +151,10 @@ export const NotificationProvider = ({ children }) => {
       console.error('Failed to mark all as read:', error);
       toast.error('Failed to mark all as read');
     }
-  };
+  }, []);
 
   // Delete notification
-  const deleteNotification = async (notificationId) => {
+  const deleteNotification = useCallback(async (notificationId) => {
     try {
       const response = await notificationService.deleteNotification(notificationId);
 
@@ -151,10 +166,10 @@ export const NotificationProvider = ({ children }) => {
       console.error('Failed to delete notification:', error);
       toast.error('Failed to delete notification');
     }
-  };
+  }, []);
 
   // Clear all notifications
-  const clearAll = async () => {
+  const clearAll = useCallback(async () => {
     try {
       const response = await notificationService.clearAll();
 
@@ -167,7 +182,7 @@ export const NotificationProvider = ({ children }) => {
       console.error('Failed to clear notifications:', error);
       toast.error('Failed to clear notifications');
     }
-  };
+  }, []);
 
   const value = {
     notifications,
